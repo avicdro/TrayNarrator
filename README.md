@@ -184,6 +184,18 @@ cargo clippy --target x86_64-pc-windows-gnu
 cargo build --release --target x86_64-pc-windows-gnu
 ```
 
+### Crear un Release
+
+```bash
+./scripts/release.sh v1.0.0
+```
+
+Esto genera un zip listo para subir a GitHub Releases con:
+- Binario compilado
+- Piper TTS y dependencias
+- Modelo de voz en español
+- Documentación
+
 ## Arquitectura
 
 ```
