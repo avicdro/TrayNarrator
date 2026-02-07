@@ -1,0 +1,12 @@
+#!/bin/sh
+# Pre-commit hook para Rust
+
+set -e
+
+echo "Ejecutando cargo fmt..."
+cargo fmt -- --check
+
+echo "Ejecutando cargo clippy..."
+cargo clippy --target x86_64-pc-windows-gnu -- -D warnings
+
+echo "Pre-commit checks pasados!"

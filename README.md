@@ -158,6 +158,32 @@ cargo build --release
 # target/release/tray_narrator.exe
 ```
 
+## Desarrollo
+
+Para contribuir al proyecto, ejecuta el script de configuración:
+
+```bash
+./scripts/setup.sh
+```
+
+Esto configura:
+- Git hooks para ejecutar `cargo fmt` y `cargo clippy` antes de cada commit
+- Target de cross-compilation para Windows
+- Componentes necesarios de Rust
+
+### Comandos útiles
+
+```bash
+# Formatear código
+cargo fmt
+
+# Ejecutar linter
+cargo clippy --target x86_64-pc-windows-gnu
+
+# Compilar para Windows
+cargo build --release --target x86_64-pc-windows-gnu
+```
+
 ## Arquitectura
 
 ```

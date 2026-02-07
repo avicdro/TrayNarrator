@@ -336,11 +336,7 @@ fn generar_audio_piper(texto: &str) -> Result<(), String> {
         &texto[..texto.len().min(50)]
     ));
 
-    let texto_limpio = texto
-        .replace('\r', " ")
-        .replace('\n', " ")
-        .trim()
-        .to_string();
+    let texto_limpio = texto.replace(['\r', '\n'], " ").trim().to_string();
 
     if texto_limpio.is_empty() {
         return Err("Texto vacío después de limpiar".to_string());
