@@ -1,0 +1,13 @@
+# Configuración de compilación cruzada para Windows
+# Este archivo le dice a Cargo cómo compilar para Windows desde Linux
+
+[target.x86_64-pc-windows-gnu]
+# Usamos el linker de mingw-w64 para Windows 64-bit
+linker = "x86_64-w64-mingw32-gcc"
+# Variables de entorno necesarias para la compilación
+rustflags = ["-C", "target-feature=+crt-static"]
+
+# Nota sobre compilación cruzada:
+# 1. Desde WSL2, ejecutar: cargo build --release --target x86_64-pc-windows-gnu
+# 2. El binario .exe estará en: target/x86_64-pc-windows-gnu/release/tray_narrator.exe
+# 3. Copiar el .exe junto con piper.exe y el modelo .onnx a Windows

@@ -1,0 +1,56 @@
+[package]
+name = "tray_narrator"
+version = "0.1.0"
+edition = "2021"
+authors = ["avicd"]
+description = "Lector TTS ultraligero para Windows usando Piper TTS"
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/avicd/TrayNarrator"
+homepage = "https://github.com/avicd/TrayNarrator"
+keywords = ["tts", "text-to-speech", "piper", "windows", "accessibility"]
+categories = ["accessibility", "multimedia::audio"]
+rust-version = "1.70"
+
+# Compilar como aplicación Windows GUI (sin consola visible)
+# Esto funciona junto con #![windows_subsystem = "windows"] en main.rs
+[[bin]]
+name = "tray_narrator"
+path = "src/main.rs"
+
+[dependencies]
+# Atajos de teclado globales
+inputbot = "0.6"
+
+# Lectura del portapapeles
+arboard = "3.4"
+
+# Simulación de input de teclado (Ctrl+C)
+enigo = "0.2"
+
+# Reproducción de audio WAV
+rodio = "0.19"
+
+# Estado global thread-safe para el reproductor
+lazy_static = "1.5"
+
+# Para el Mutex atómico y condiciones de carrera
+parking_lot = "0.12"
+
+# Para el system tray en Windows
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader"
+] }
+
+[profile.release]
+# Optimización máxima para binario pequeño
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

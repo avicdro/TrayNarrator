@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-action@stable
+      with:
+        targets: x86_64-pc-windows-gnu
+    
+    - name: Install mingw-w64
+      run: sudo apt-get update && sudo apt-get install -y mingw-w64
+    
+    - name: Check formatting
+      run: cargo fmt --check
+    
+    - name: Run Clippy
+      run: cargo clippy --target x86_64-pc-windows-gnu -- -D warnings
+      continue-on-error: true
+    
+    - name: Build
+      run: cargo build --release --target x86_64-pc-windows-gnu
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: tray_narrator-windows
+        path: target/x86_64-pc-windows-gnu/release/tray_narrator.exe
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: tray_narrator-windows
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: tray_narrator.exe
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
