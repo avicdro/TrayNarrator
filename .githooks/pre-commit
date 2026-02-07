@@ -4,7 +4,10 @@
 set -e
 
 echo "Ejecutando cargo fmt..."
-cargo fmt -- --check
+cargo fmt
+
+# Añadir archivos formateados al commit
+git add -u
 
 echo "Ejecutando cargo clippy..."
 cargo clippy --target x86_64-pc-windows-gnu -- -D warnings
