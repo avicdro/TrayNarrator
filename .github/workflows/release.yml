@@ -1,0 +1,237 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# TrayNarrator - Release Workflow
+# ═══════════════════════════════════════════════════════════════════════════════
+# Este workflow construye y publica releases de TrayNarrator para Windows
+#
+# Uso:
+#   1. Crear primero una release "assets-v1" con los archivos pesados (piper/)
+#   2. Hacer un tag como: git tag v0.2.0 && git push --tags
+#   3. El workflow construirá y creará la release automáticamente
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.*'
+  # Permitir ejecución manual con un tag específico
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag de la versión (ej: v0.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  # Tag de la release con assets pesados (modelos, DLLs, etc.)
+  ASSETS_TAG: assets-v1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Job: build-windows
+  # Construye el binario para Windows y crea el ZIP con assets
+  # ═══════════════════════════════════════════════════════════════════════════
+  build-windows:
+    name: Build Windows x86_64
+    runs-on: windows-latest
+    
+    steps:
+      # ─────────────────────────────────────────────────────────────────────────
+      # Paso 1: Checkout del código
+      # ─────────────────────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Paso 2: Configurar Rust
+      # ─────────────────────────────────────────────────────────────────────────
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Paso 3: Descargar assets pesados desde la release "assets-v1"
+      # ─────────────────────────────────────────────────────────────────────────
+      - name: Download heavy assets from assets-v1 release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          Write-Host "📦 Descargando assets desde la release '${{ env.ASSETS_TAG }}'..."
+          
+          # Crear directorio piper
+          New-Item -ItemType Directory -Force -Path "piper"
+          New-Item -ItemType Directory -Force -Path "piper/espeak-ng-data"
+          
+          # Descargar el ZIP de assets
+          gh release download ${{ env.ASSETS_TAG }} --pattern "piper-assets.zip" --dir "."
+          
+          # Extraer el ZIP
+          Write-Host "📂 Extrayendo assets..."
+          Expand-Archive -Path "piper-assets.zip" -DestinationPath "." -Force
+          
+          # Limpiar ZIP temporal
+          Remove-Item "piper-assets.zip"
+          
+          # Verificar que los archivos existen
+          Write-Host "✅ Verificando archivos descargados..."
+          Get-ChildItem -Path "piper" -Recurse | Select-Object FullName
+          
+          if (!(Test-Path "piper/piper.exe")) {
+            Write-Error "❌ Error: piper.exe no encontrado"
+            exit 1
+          }
+          if (!(Test-Path "piper/es_ES-sharvard-medium.onnx")) {
+            Write-Error "❌ Error: modelo .onnx no encontrado"
+            exit 1
+          }
+          
+          Write-Host "✅ Assets descargados correctamente"
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Paso 4: Compilar el binario
+      # ─────────────────────────────────────────────────────────────────────────
+      - name: Build release binary
+        run: |
+          cargo build --release --target x86_64-pc-windows-msvc
+          
+          # Verificar que el binario existe
+          if (!(Test-Path "target/x86_64-pc-windows-msvc/release/tray_narrator.exe")) {
+            Write-Error "❌ Error: binario no compilado"
+            exit 1
+          }
+          
+          Write-Host "✅ Binario compilado: $(Get-Item 'target/x86_64-pc-windows-msvc/release/tray_narrator.exe' | Select-Object -ExpandProperty Length) bytes"
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Paso 5: Crear el paquete ZIP para distribución
+      # ─────────────────────────────────────────────────────────────────────────
+      - name: Package release
+        id: package
+        run: |
+          # Obtener versión del tag
+          $version = "${{ github.ref_name }}"
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $version = "${{ inputs.tag }}"
+          }
+          
+          $packageName = "TrayNarrator-$version-windows-x86_64"
+          $packageDir = "dist/$packageName"
+          
+          Write-Host "📦 Creando paquete: $packageName"
+          
+          # Crear estructura de directorios
+          New-Item -ItemType Directory -Force -Path $packageDir
+          New-Item -ItemType Directory -Force -Path "$packageDir/piper"
+          
+          # Copiar binario
+          Copy-Item "target/x86_64-pc-windows-msvc/release/tray_narrator.exe" -Destination $packageDir
+          
+          # Copiar documentación
+          Copy-Item "LICENSE" -Destination $packageDir
+          Copy-Item "README.md" -Destination $packageDir
+          
+          # Copiar carpeta piper completa
+          Copy-Item "piper/*" -Destination "$packageDir/piper" -Recurse
+          
+          # Crear ZIP
+          $zipPath = "dist/$packageName.zip"
+          Compress-Archive -Path "$packageDir/*" -DestinationPath $zipPath -Force
+          
+          Write-Host "✅ ZIP creado: $zipPath"
+          Write-Host "📊 Tamaño: $((Get-Item $zipPath).Length / 1MB) MB"
+          
+          # Mostrar contenido del ZIP
+          Write-Host "📋 Contenido del ZIP:"
+          Get-ChildItem -Path $packageDir -Recurse | Select-Object FullName
+          
+          # Output para uso posterior
+          echo "zip_path=$zipPath" >> $env:GITHUB_OUTPUT
+          echo "package_name=$packageName" >> $env:GITHUB_OUTPUT
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Paso 6: Crear/Actualizar Release en GitHub
+      # ─────────────────────────────────────────────────────────────────────────
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = "${{ steps.package.outputs.version }}"
+          $zipPath = "${{ steps.package.outputs.zip_path }}"
+          $packageName = "${{ steps.package.outputs.package_name }}"
+          
+          Write-Host "🚀 Creando release $version..."
+          
+          # Verificar si la release ya existe
+          $releaseExists = gh release view $version 2>$null
+          
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "📝 Release $version ya existe, subiendo assets..."
+            gh release upload $version $zipPath --clobber
+          } else {
+            Write-Host "🆕 Creando nueva release $version..."
+            
+            # Crear release con notas
+            $releaseNotes = @"
+          ## TrayNarrator $version
+          
+          ### 📥 Descarga
+          
+          Descarga ``$packageName.zip`` y extrae en ``C:\TrayNarrator\``
+          
+          ### 📁 Contenido
+          - ``tray_narrator.exe`` - Ejecutable principal
+          - ``piper/`` - Motor TTS y modelo de voz en español
+          - ``LICENSE`` - Licencia MIT
+          - ``README.md`` - Documentación
+          
+          ### ⌨️ Atajos de teclado
+          - **F8**: Leer texto seleccionado
+          - **F9**: Pausar/Reanudar
+          - **Ctrl+[**: Más rápido
+          - **Ctrl+]**: Más lento
+          
+          ### 📋 Requisitos
+          - Windows 10/11 (64-bit)
+          "@
+            
+            gh release create $version $zipPath `
+              --title "TrayNarrator $version" `
+              --notes "$releaseNotes" `
+              --latest
+          }
+          
+          Write-Host "✅ Release publicada: https://github.com/${{ github.repository }}/releases/tag/$version"
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Paso 7: Resumen del job
+      # ─────────────────────────────────────────────────────────────────────────
+      - name: Summary
+        run: |
+          Write-Host ""
+          Write-Host "═══════════════════════════════════════════════════════════════"
+          Write-Host "                    ✅ RELEASE COMPLETADA                       "
+          Write-Host "═══════════════════════════════════════════════════════════════"
+          Write-Host ""
+          Write-Host "  📦 Versión:   ${{ steps.package.outputs.version }}"
+          Write-Host "  📁 Paquete:   ${{ steps.package.outputs.package_name }}.zip"
+          Write-Host "  🔗 Release:   https://github.com/${{ github.repository }}/releases/tag/${{ steps.package.outputs.version }}"
+          Write-Host ""
+          Write-Host "═══════════════════════════════════════════════════════════════"

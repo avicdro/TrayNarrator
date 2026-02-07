@@ -38,9 +38,7 @@ temp.wav
 config.local.toml
 
 # Piper TTS (no incluir en el repo, muy grandes)
-piper/*.onnx
-piper/*.ort
-piper/espeak-ng-data/
-piper/*.dll
-piper/*.exe
-piper/*
+piper/
+
+# Releases y paquetes (generados localmente)
+release/

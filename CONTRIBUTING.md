@@ -88,6 +88,29 @@ src/
 - [ ] Sonido de confirmación al presionar F8
 - [ ] Opción de seleccionar dispositivo de audio
 - [ ] Instalador MSI/NSIS
+- [ ] Soporte para Linux/macOS
+
+## CI/CD y Releases
+
+Este proyecto usa GitHub Actions para releases automáticas:
+
+1. **Assets pesados** se almacenan en una release separada (`assets-v1`)
+2. Al crear un tag `v*`, el workflow automáticamente:
+   - Descarga los assets de `assets-v1`
+   - Compila el binario
+   - Crea y publica la release
+
+### Para crear una nueva release:
+
+```bash
+# 1. Actualiza versión en Cargo.toml
+# 2. Actualiza CHANGELOG.md
+# 3. Commit y tag
+git add .
+git commit -m "release: vX.Y.Z"
+git tag vX.Y.Z
+git push && git push --tags
+```
 
 ## Código de Conducta
 

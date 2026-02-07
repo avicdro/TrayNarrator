@@ -5,6 +5,12 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/avicdro/TrayNarrator/releases"><img src="https://img.shields.io/github/v/release/avicdro/TrayNarrator?style=flat-square" alt="Release"></a>
+  <a href="https://github.com/avicdro/TrayNarrator/actions"><img src="https://img.shields.io/github/actions/workflow/status/avicdro/TrayNarrator/release.yml?style=flat-square&label=build" alt="Build"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/avicdro/TrayNarrator?style=flat-square" alt="License"></a>
+</p>
+
+<p align="center">
   <a href="#características">Características</a> •
   <a href="#instalación">Instalación</a> •
   <a href="#uso">Uso</a> •
@@ -190,15 +196,45 @@ Esto configura:
 
 ### Crear un Release
 
+Las releases se crean automáticamente con GitHub Actions:
+
+```bash
+# 1. Actualiza la versión en Cargo.toml
+# 2. Commit y push los cambios
+git add .
+git commit -m "release: v0.2.0"
+
+# 3. Crea y sube el tag
+git tag v0.2.0
+git push && git push --tags
+```
+
+El workflow automáticamente:
+1. Descarga los assets pesados desde `assets-v1`
+2. Compila el binario para Windows x86_64
+3. Crea el ZIP con todo incluido
+4. Publica la release en GitHub
+
+#### Actualizar Assets Pesados
+
+Si necesitas actualizar Piper TTS o los modelos:
+
+```bash
+# Crear nuevo ZIP con la carpeta piper/
+cd release
+zip -r piper-assets.zip piper/
+
+# Subir a la release assets-v1
+gh release upload assets-v1 piper-assets.zip --clobber
+```
+
+#### Release Manual (Legacy)
+
+También puedes crear releases manualmente:
+
 ```bash
 ./scripts/release.sh v1.0.0
 ```
-
-Esto genera un zip listo para subir a GitHub Releases con:
-- Binario compilado
-- Piper TTS y dependencias
-- Modelo de voz en español
-- Documentación
 
 ## Arquitectura
 

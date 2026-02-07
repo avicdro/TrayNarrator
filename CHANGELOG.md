@@ -8,6 +8,11 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 ## [0.2.0] - 2026-02-07
 
 ### Añadido
+- **CI/CD con GitHub Actions** - Releases automáticas para Windows
+  - Workflow que compila y empaqueta automáticamente al crear un tag
+  - Sistema de assets separados (`assets-v1`) para archivos pesados (Piper TTS, modelos)
+  - Soporte para ejecución manual del workflow
+- Configuración de `cargo-dist` en `Cargo.toml`
 - Scripts de desarrollo para automatizar tareas comunes
   - `build.sh` - Compilar para Windows desde WSL
   - `deploy-win.sh` - Desplegar programa completo a `C:\TrayNarrator`
@@ -20,7 +25,8 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 - Documentación de scripts en README
 
 ### Cambiado
-- README más profesional, sin emojis excesivos
+- README actualizado con información de CI/CD y releases automáticas
+- Estructura de proyecto mejorada
 
 ## [0.1.0] - 2026-02-07
 
