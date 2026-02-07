@@ -2,12 +2,12 @@
 name = "tray_narrator"
 version = "0.1.0"
 edition = "2021"
-authors = ["avicd"]
+authors = ["avicdro"]
 description = "Lector TTS ultraligero para Windows usando Piper TTS"
 readme = "README.md"
 license = "MIT"
-repository = "https://github.com/avicd/TrayNarrator"
-homepage = "https://github.com/avicd/TrayNarrator"
+repository = "https://github.com/avicdro/TrayNarrator"
+homepage = "https://github.com/avicdro/TrayNarrator"
 keywords = ["tts", "text-to-speech", "piper", "windows", "accessibility"]
 categories = ["accessibility", "multimedia::audio"]
 rust-version = "1.70"

@@ -3,7 +3,7 @@
 
 # Rust
 **/*.rs.bk
-Cargo.lock
+# Cargo.lock se incluye para binarios (no librerías)
 
 # IDE
 .idea/
@@ -43,3 +43,4 @@ piper/*.ort
 piper/espeak-ng-data/
 piper/*.dll
 piper/*.exe
+piper/*

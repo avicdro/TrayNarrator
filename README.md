@@ -137,7 +137,7 @@ rustup target add x86_64-pc-windows-gnu
 sudo apt-get install -y mingw-w64
 
 # Clonar y compilar
-git clone https://github.com/tu-usuario/TrayNarrator.git
+git clone https://github.com/avicdro/TrayNarrator.git
 cd TrayNarrator
 cargo build --release --target x86_64-pc-windows-gnu
 
@@ -150,7 +150,7 @@ cargo build --release --target x86_64-pc-windows-gnu
 ```powershell
 # Instalar Rust desde https://rustup.rs
 # Luego:
-git clone https://github.com/tu-usuario/TrayNarrator.git
+git clone https://github.com/avicdro/TrayNarrator.git
 cd TrayNarrator
 cargo build --release
 
