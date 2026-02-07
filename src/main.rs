@@ -1,5 +1,5 @@
 //! TrayNarrator - Lector TTS ultraligero para Windows usando Piper TTS
-//! 
+//!
 //! Este programa escucha atajos de teclado globales para leer texto seleccionado.
 //! - F8: Copia el texto seleccionado y lo lee en voz alta
 //! - F9: Pausa/Reanuda la reproducción
@@ -17,8 +17,8 @@
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, Write};
 use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicU8, AtomicU32, AtomicBool, Ordering};
-use std::sync::mpsc::{self, Sender, Receiver};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU8, Ordering};
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
@@ -107,11 +107,7 @@ lazy_static! {
 
 /// Escribe un mensaje en el archivo de log para debugging
 fn log(mensaje: &str) {
-    if let Ok(mut archivo) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(RUTA_LOG)
-    {
+    if let Ok(mut archivo) = OpenOptions::new().create(true).append(true).open(RUTA_LOG) {
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs())
@@ -127,12 +123,12 @@ fn log(mensaje: &str) {
 #[cfg(windows)]
 mod tray {
     use super::*;
-    use std::ptr::null_mut;
     use std::mem::zeroed;
-    use windows_sys::Win32::UI::WindowsAndMessaging::*;
-    use windows_sys::Win32::UI::Shell::*;
+    use std::ptr::null_mut;
     use windows_sys::Win32::Foundation::*;
     use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
+    use windows_sys::Win32::UI::Shell::*;
+    use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
     const WM_TRAYICON: u32 = WM_USER + 1;
     const ID_TRAY_EXIT: u16 = 1001;
@@ -173,8 +169,10 @@ mod tray {
                 class_name.as_ptr(),
                 window_name.as_ptr(),
                 WS_OVERLAPPEDWINDOW,
-                CW_USEDEFAULT, CW_USEDEFAULT,
-                CW_USEDEFAULT, CW_USEDEFAULT,
+                CW_USEDEFAULT,
+                CW_USEDEFAULT,
+                CW_USEDEFAULT,
+                CW_USEDEFAULT,
                 null_mut(),
                 null_mut(),
                 hinstance,
@@ -195,7 +193,7 @@ mod tray {
             nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
             nid.uCallbackMessage = WM_TRAYICON;
             nid.hIcon = LoadIconW(null_mut(), IDI_APPLICATION);
-            
+
             // Copiar tooltip
             let tip_bytes = tip.len().min(128);
             nid.szTip[..tip_bytes].copy_from_slice(&tip[..tip_bytes]);
@@ -236,19 +234,32 @@ mod tray {
                     GetCursorPos(&mut pt);
 
                     let hmenu = CreatePopupMenu();
-                    
+
                     // Mostrar velocidad actual
                     let vel = VELOCIDAD_ACTUAL.load(Ordering::SeqCst);
                     let vel_text = to_wide(&format!("Velocidad: {}%", vel));
-                    AppendMenuW(hmenu, MF_STRING | MF_GRAYED, ID_TRAY_VELOCIDAD as usize, vel_text.as_ptr());
-                    
+                    AppendMenuW(
+                        hmenu,
+                        MF_STRING | MF_GRAYED,
+                        ID_TRAY_VELOCIDAD as usize,
+                        vel_text.as_ptr(),
+                    );
+
                     AppendMenuW(hmenu, MF_SEPARATOR, 0, null_mut());
-                    
+
                     let salir_text = to_wide("Salir");
                     AppendMenuW(hmenu, MF_STRING, ID_TRAY_EXIT as usize, salir_text.as_ptr());
 
                     SetForegroundWindow(hwnd);
-                    TrackPopupMenu(hmenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, hwnd, null_mut());
+                    TrackPopupMenu(
+                        hmenu,
+                        TPM_BOTTOMALIGN | TPM_LEFTALIGN,
+                        pt.x,
+                        pt.y,
+                        0,
+                        hwnd,
+                        null_mut(),
+                    );
                     DestroyMenu(hmenu);
                 }
                 0
@@ -281,11 +292,14 @@ fn simular_copiar() -> Result<(), String> {
         .map_err(|e| format!("Error inicializando Enigo: {}", e))?;
 
     // Simular Ctrl+C
-    enigo.key(Key::Control, enigo::Direction::Press)
+    enigo
+        .key(Key::Control, enigo::Direction::Press)
         .map_err(|e| format!("Error presionando Ctrl: {}", e))?;
-    enigo.key(Key::Unicode('c'), enigo::Direction::Click)
+    enigo
+        .key(Key::Unicode('c'), enigo::Direction::Click)
         .map_err(|e| format!("Error presionando C: {}", e))?;
-    enigo.key(Key::Control, enigo::Direction::Release)
+    enigo
+        .key(Key::Control, enigo::Direction::Release)
         .map_err(|e| format!("Error soltando Ctrl: {}", e))?;
 
     thread::sleep(Duration::from_millis(DELAY_COPIAR_MS));
@@ -294,10 +308,11 @@ fn simular_copiar() -> Result<(), String> {
 
 /// Lee el texto del portapapeles
 fn leer_portapapeles() -> Result<String, String> {
-    let mut clipboard = Clipboard::new()
-        .map_err(|e| format!("Error accediendo al portapapeles: {}", e))?;
-    
-    let texto = clipboard.get_text()
+    let mut clipboard =
+        Clipboard::new().map_err(|e| format!("Error accediendo al portapapeles: {}", e))?;
+
+    let texto = clipboard
+        .get_text()
         .map_err(|e| format!("Error leyendo texto del portapapeles: {}", e))?;
 
     if texto.trim().is_empty() {
@@ -315,8 +330,12 @@ fn obtener_velocidad() -> f32 {
 /// Genera audio WAV usando Piper TTS
 fn generar_audio_piper(texto: &str) -> Result<(), String> {
     let velocidad = obtener_velocidad();
-    log(&format!("Generando audio (velocidad: {}) para: '{}'", velocidad, &texto[..texto.len().min(50)]));
-    
+    log(&format!(
+        "Generando audio (velocidad: {}) para: '{}'",
+        velocidad,
+        &texto[..texto.len().min(50)]
+    ));
+
     let texto_limpio = texto
         .replace('\r', " ")
         .replace('\n', " ")
@@ -342,20 +361,21 @@ fn generar_audio_piper(texto: &str) -> Result<(), String> {
     #[cfg(windows)]
     comando.creation_flags(CREATE_NO_WINDOW);
 
-    let mut proceso = comando.spawn()
-        .map_err(|e| {
-            let msg = format!("Error iniciando Piper: {}", e);
-            log(&msg);
-            msg
-        })?;
+    let mut proceso = comando.spawn().map_err(|e| {
+        let msg = format!("Error iniciando Piper: {}", e);
+        log(&msg);
+        msg
+    })?;
 
     if let Some(ref mut stdin) = proceso.stdin {
-        stdin.write_all(texto_limpio.as_bytes())
+        stdin
+            .write_all(texto_limpio.as_bytes())
             .map_err(|e| format!("Error escribiendo a Piper: {}", e))?;
     }
     drop(proceso.stdin.take());
 
-    let output = proceso.wait_with_output()
+    let output = proceso
+        .wait_with_output()
         .map_err(|e| format!("Error esperando a Piper: {}", e))?;
 
     if !output.status.success() {
@@ -385,10 +405,14 @@ fn ajustar_velocidad(incremento: i32) {
     } else {
         actual.saturating_sub(VELOCIDAD_PASO).max(VELOCIDAD_MIN)
     };
-    
+
     if nueva != actual {
         VELOCIDAD_ACTUAL.store(nueva, Ordering::SeqCst);
-        log(&format!("Velocidad ajustada: {}% (length_scale: {:.2})", nueva, nueva as f32 / 100.0));
+        log(&format!(
+            "Velocidad ajustada: {}% (length_scale: {:.2})",
+            nueva,
+            nueva as f32 / 100.0
+        ));
     }
 }
 
@@ -398,12 +422,12 @@ fn ajustar_velocidad(incremento: i32) {
 
 fn hilo_audio(receiver: Receiver<ComandoAudio>) {
     log("Hilo de audio iniciado");
-    
+
     let (_stream, stream_handle) = match OutputStream::try_default() {
         Ok(s) => {
             log("Stream de audio inicializado");
             s
-        },
+        }
         Err(e) => {
             log(&format!("Error audio: {}", e));
             return;
@@ -420,28 +444,24 @@ fn hilo_audio(receiver: Receiver<ComandoAudio>) {
         match receiver.recv_timeout(Duration::from_millis(100)) {
             Ok(ComandoAudio::Reproducir) => {
                 log("Comando Reproducir");
-                
+
                 if let Some(ref sink) = sink_actual {
                     sink.stop();
                 }
 
                 match Sink::try_new(&stream_handle) {
-                    Ok(sink) => {
-                        match File::open(RUTA_TEMP_WAV) {
-                            Ok(archivo) => {
-                                match Decoder::new(BufReader::new(archivo)) {
-                                    Ok(fuente) => {
-                                        log("Reproduciendo...");
-                                        sink.append(fuente);
-                                        ESTADO_AUDIO.store(ESTADO_REPRODUCIENDO, Ordering::SeqCst);
-                                        sink_actual = Some(sink);
-                                    }
-                                    Err(e) => log(&format!("Error decoder: {}", e)),
-                                }
+                    Ok(sink) => match File::open(RUTA_TEMP_WAV) {
+                        Ok(archivo) => match Decoder::new(BufReader::new(archivo)) {
+                            Ok(fuente) => {
+                                log("Reproduciendo...");
+                                sink.append(fuente);
+                                ESTADO_AUDIO.store(ESTADO_REPRODUCIENDO, Ordering::SeqCst);
+                                sink_actual = Some(sink);
                             }
-                            Err(e) => log(&format!("Error abriendo WAV: {}", e)),
-                        }
-                    }
+                            Err(e) => log(&format!("Error decoder: {}", e)),
+                        },
+                        Err(e) => log(&format!("Error abriendo WAV: {}", e)),
+                    },
                     Err(e) => log(&format!("Error sink: {}", e)),
                 }
             }
@@ -480,7 +500,7 @@ fn hilo_audio(receiver: Receiver<ComandoAudio>) {
             }
         }
     }
-    
+
     log("Hilo de audio terminado");
 }
 
@@ -503,7 +523,7 @@ fn manejar_f8() {
         Ok(t) => {
             log(&format!("Texto: {} chars", t.len()));
             t
-        },
+        }
         Err(e) => {
             log(&format!("Error portapapeles: {}", e));
             return;
@@ -528,12 +548,12 @@ fn manejar_f9() {
 
 fn manejar_mas_lento() {
     log("Ctrl+] - Más lento");
-    ajustar_velocidad(1);  // Aumentar length_scale = más lento
+    ajustar_velocidad(1); // Aumentar length_scale = más lento
 }
 
 fn manejar_mas_rapido() {
     log("Ctrl+[ - Más rápido");
-    ajustar_velocidad(-1);  // Reducir length_scale = más rápido
+    ajustar_velocidad(-1); // Reducir length_scale = más rápido
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -569,7 +589,7 @@ fn hilo_inputbot() {
 
     // Bucle de eventos
     inputbot::handle_input_events();
-    
+
     log("Hilo inputbot terminado");
 }
 
