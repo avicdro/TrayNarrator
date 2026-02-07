@@ -5,6 +5,23 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.2.0] - 2026-02-07
+
+### Añadido
+- Scripts de desarrollo para automatizar tareas comunes
+  - `build.sh` - Compilar para Windows desde WSL
+  - `deploy-win.sh` - Desplegar programa completo a `C:\TrayNarrator`
+  - `build-and-deploy-wsl-win.sh` - Build + deploy en un solo paso
+  - `lint.sh` - Formateo y linting con cargo fmt/clippy
+  - `release.sh` - Crear zip para releases
+  - `setup.sh` - Configurar entorno de desarrollo
+  - Scripts `.bat` para Windows nativo en `scripts/win/`
+- Git hooks para pre-commit (cargo fmt + clippy automático)
+- Documentación de scripts en README
+
+### Cambiado
+- README más profesional, sin emojis excesivos
+
 ## [0.1.0] - 2026-02-07
 
 ### Añadido

@@ -171,18 +171,22 @@ Esto configura:
 - Target de cross-compilation para Windows
 - Componentes necesarios de Rust
 
-### Comandos útiles
+### Scripts disponibles
 
-```bash
-# Formatear código
-cargo fmt
+| Script | Descripción |
+|--------|-------------|
+| `./scripts/setup.sh` | Configura el entorno de desarrollo |
+| `./scripts/build.sh` | Compila el .exe para Windows (desde WSL) |
+| `./scripts/deploy-win.sh` | Copia el programa completo a `C:\TrayNarrator` |
+| `./scripts/build-and-deploy-wsl-win.sh` | Build + deploy en un solo paso |
+| `./scripts/lint.sh` | Ejecuta cargo fmt y clippy |
+| `./scripts/release.sh <version>` | Crea un zip para release |
 
-# Ejecutar linter
-cargo clippy --target x86_64-pc-windows-gnu
-
-# Compilar para Windows
-cargo build --release --target x86_64-pc-windows-gnu
-```
+**En Windows nativo:**
+| Script | Descripción |
+|--------|-------------|
+| `scripts\win\build.bat` | Compila el .exe |
+| `scripts\win\lint.bat` | Ejecuta fmt y clippy |
 
 ### Crear un Release
 
