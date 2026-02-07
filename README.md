@@ -1,7 +1,7 @@
 # TrayNarrator
 
 <p align="center">
-  <strong>🔊 Lector de texto a voz ultraligero para Windows</strong>
+  <strong>Lector de texto a voz ultraligero para Windows</strong>
 </p>
 
 <p align="center">
@@ -18,12 +18,12 @@ TrayNarrator es una aplicación de escritorio minimalista que convierte texto se
 
 ## Características
 
-- ⚡ **Ultraligero**: ~950KB de binario, bajo consumo de RAM
-- 🎯 **Simple**: Selecciona texto → F8 → Escucha
-- 🎛️ **Control de velocidad**: Ajusta la velocidad de lectura en tiempo real
-- ⏸️ **Pausa/Reanuda**: Control total de la reproducción
-- 🔇 **Invisible**: Sin ventana, solo icono en la bandeja del sistema
-- 🚀 **Rápido**: Piper TTS genera audio de alta calidad casi instantáneamente
+- **Ultraligero**: ~950KB de binario, bajo consumo de RAM
+- **Simple**: Selecciona texto → F8 → Escucha
+- **Control de velocidad**: Ajusta la velocidad de lectura en tiempo real
+- **Pausa/Reanuda**: Control total de la reproducción
+- **Invisible**: Sin ventana, solo icono en la bandeja del sistema
+- **Rápido**: Piper TTS genera audio de alta calidad casi instantáneamente
 
 ## Atajos de Teclado
 
@@ -230,8 +230,4 @@ Este proyecto está bajo la [Licencia MIT](LICENSE).
 - [Piper TTS](https://github.com/rhasspy/piper) - Motor de síntesis de voz
 - [Piper Voices](https://huggingface.co/rhasspy/piper-voices) - Modelos de voz
 
----
 
-<p align="center">
-  Hecho con ❤️ y Rust
-</p>
