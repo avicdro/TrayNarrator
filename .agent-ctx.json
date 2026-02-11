@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "editors": [],
+  "language": "en",
+  "backups": true,
+  "customTemplates": null,
+  "skills": [
+    "skills/skill-generating.md",
+    "skills/skill-agents.md",
+    "skills/skill-architecture.md",
+    "skills/skill-rules.md",
+    "skills/skill-project-state.md",
+    "skills/skill-memory.md"
+  ],
+  "rules": [
+    "rules/rule-coding-standards.md"
+  ],
+  "mcps": []
+}
