@@ -68,15 +68,15 @@ cargo run --release --target x86_64-pc-windows-gnu
 
 ```
 src/
-└── main.rs          # Todo el código (modular interno)
-    ├── Configuración (constantes)
-    ├── Estado global (atomics, canales)
-    ├── Logging
-    ├── System Tray (módulo tray)
-    ├── Funciones auxiliares (copiar, portapapeles, Piper)
-    ├── Hilo de audio
-    ├── Manejadores de teclas
-    └── main()
+├── main.rs          # Entry point: spawns threads, launches tray
+├── audio.rs         # Audio thread: rodio playback, command receiver
+├── clipboard.rs     # Clipboard: copy simulation + read
+├── config.rs        # Compile-time constants (paths, speeds, version)
+├── hotkeys.rs       # Global hotkey registration (F8, F9, Ctrl+[ / Ctrl+] por presets xN)
+├── logging.rs       # Timestamped file-based logging
+├── state.rs         # Global state: atomics, enums, speed adjustment
+├── tray.rs          # System tray icon + context menu
+└── tts.rs           # Piper TTS subprocess invocation
 ```
 
 ## Ideas para Contribuir

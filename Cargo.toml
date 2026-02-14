@@ -1,6 +1,6 @@
 [package]
 name = "tray_narrator"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["avicdro"]
 description = "Lector TTS ultraligero para Windows usando Piper TTS"
@@ -37,15 +37,17 @@ lazy_static = "1.5"
 # Para el Mutex atómico y condiciones de carrera
 parking_lot = "0.12"
 
-# Para el system tray en Windows
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = [
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_UI_Shell",
-    "Win32_Foundation",
-    "Win32_Graphics_Gdi",
-    "Win32_System_LibraryLoader"
-] }
+# System tray icon (cross-platform)
+tray-icon = "0.19"
+
+# Menú contextual para el tray (cross-platform)
+muda = "0.15"
+
+# Decodificación de imagen PNG para el icono del tray
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+# Event loop para el system tray
+winit = "0.30"
 
 [profile.release]
 # Optimización máxima para binario pequeño

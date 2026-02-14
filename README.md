@@ -28,7 +28,7 @@ TrayNarrator es una aplicación de escritorio minimalista que convierte texto se
 - **Simple**: Selecciona texto → F8 → Escucha
 - **Control de velocidad**: Ajusta la velocidad de lectura en tiempo real
 - **Pausa/Reanuda**: Control total de la reproducción
-- **Invisible**: Sin ventana, solo icono en la bandeja del sistema
+- **Invisible**: Sin ventana, control total desde el icono de la bandeja del sistema (Menú Contextual)
 - **Rápido**: Piper TTS genera audio de alta calidad casi instantáneamente
 
 ## Atajos de Teclado
@@ -37,8 +37,26 @@ TrayNarrator es una aplicación de escritorio minimalista que convierte texto se
 |-------|--------|
 | `F8` | Copiar texto seleccionado y leerlo |
 | `F9` | Pausar / Reanudar reproducción |
-| `Ctrl+[` | Aumentar velocidad (más rápido) |
-| `Ctrl+]` | Reducir velocidad (más lento) |
+| `Ctrl+[` | Más rápido (siguiente preset xN) |
+| `Ctrl+]` | Más lento (preset anterior xN) |
+
+## Presets de Velocidad (xN)
+
+La velocidad se controla por presets fijos para mantener una experiencia consistente entre hotkeys y menú del tray:
+
+- `x0.5`
+- `x0.75`
+- `x1` (valor por defecto)
+- `x1.25`
+- `x1.5`
+- `x2`
+- `x3`
+
+Notas:
+- `Ctrl+[` avanza al siguiente preset (más rápido).
+- `Ctrl+]` vuelve al preset anterior (más lento).
+- Ejemplo: si estás en `x1` y presionas más lento, pasa a `x0.75`.
+- El menú del tray se sincroniza automáticamente cuando cambias velocidad con hotkeys.
 
 ## Requisitos
 
@@ -107,26 +125,38 @@ C:\TrayNarrator\
    - `F8` de nuevo para detener y leer otro texto
 
 4. **Ajusta la velocidad**:
-   - `Ctrl+[` para más rápido
-   - `Ctrl+]` para más lento
+   - `Ctrl+[` para pasar al siguiente preset más rápido
+   - `Ctrl+]` para volver al preset más lento
    - El cambio aplica a la próxima lectura
+   - El submenú de velocidad del tray refleja el cambio automáticamente
 
 5. **Cerrar la aplicación**:
    - Click derecho en el icono de la bandeja → "Salir"
 
 ## Configuración
 
-Edita las constantes al inicio de `src/main.rs` antes de compilar:
+Edita las constantes en `src/config.rs` antes de compilar:
 
 ```rust
 /// Ruta al ejecutable de Piper TTS
-const RUTA_PIPER: &str = r"C:\TrayNarrator\piper\piper.exe";
+pub const RUTA_PIPER: &str = r"C:\TrayNarrator\piper\piper.exe";
 
 /// Ruta al modelo de voz .onnx
-const RUTA_MODELO: &str = r"C:\TrayNarrator\piper\es_ES-sharvard-medium.onnx";
+pub const RUTA_MODELO: &str = r"C:\TrayNarrator\piper\es_ES-sharvard-medium.onnx";
 
-/// Velocidad inicial (80 = 0.8 = 1.25x más rápido)
-const VELOCIDAD_INICIAL: u32 = 80;
+/// Presets de velocidad en formato xN (etiqueta, length_scale × 100)
+pub const VELOCIDADES_PRESET: &[(&str, u32)] = &[
+   ("x0.5", 200),
+   ("x0.75", 133),
+   ("x1", 100),
+   ("x1.25", 80),
+   ("x1.5", 67),
+   ("x2", 50),
+   ("x3", 33),
+];
+
+/// Preset por defecto: x1
+pub const VELOCIDAD_PRESET_DEFECTO: usize = 2;
 ```
 
 ## Compilación
@@ -202,10 +232,10 @@ Las releases se crean automáticamente con GitHub Actions:
 # 1. Actualiza la versión en Cargo.toml
 # 2. Commit y push los cambios
 git add .
-git commit -m "release: v0.2.0"
+git commit -m "release: v0.3.0"
 
 # 3. Crea y sube el tag
-git tag v0.2.0
+git tag v0.3.0
 git push && git push --tags
 ```
 
@@ -238,34 +268,17 @@ También puedes crear releases manualmente:
 
 ## Arquitectura
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      TrayNarrator                           │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │  Inputbot   │  │   Arboard   │  │       Enigo         │  │
-│  │  (Hotkeys)  │  │ (Clipboard) │  │  (Simulate Ctrl+C)  │  │
-│  └──────┬──────┘  └──────┬──────┘  └──────────┬──────────┘  │
-│         │                │                     │            │
-│         └────────────────┼─────────────────────┘            │
-│                          ▼                                  │
-│              ┌───────────────────────┐                      │
-│              │     Main Thread       │                      │
-│              │   (System Tray UI)    │                      │
-│              └───────────┬───────────┘                      │
-│                          │ mpsc channel                     │
-│                          ▼                                  │
-│              ┌───────────────────────┐                      │
-│              │    Audio Thread       │                      │
-│              │   (Rodio playback)    │                      │
-│              └───────────┬───────────┘                      │
-│                          │                                  │
-│                          ▼                                  │
-│              ┌───────────────────────┐                      │
-│              │     Piper TTS         │                      │
-│              │  (External process)   │                      │
-│              └───────────────────────┘                      │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A["main.rs"] -->|"thread::spawn"| B["hotkeys::hilo_inputbot()"]
+    A -->|"thread::spawn"| C["audio::hilo_audio()"]
+    A -->|"blocks main thread"| D["tray::run_tray()"]
+    D -->|"include_bytes!"| E["traynarrator-icon.png"]
+    D -->|"MenuEvent::receiver()"| F["Menu Actions"]
+    F -->|"select speed preset"| G["state::establecer_velocidad()"]
+    F -->|"exit"| H["DEBE_SALIR → event_loop.exit()"]
+    B -->|"Ctrl+[/]"| I["state::velocidad_preset_*()"]
+    I --> G
 ```
 
 ### Dependencias
@@ -278,12 +291,15 @@ También puedes crear releases manualmente:
 | `rodio` | Reproducción de audio |
 | `parking_lot` | Mutex eficiente |
 | `lazy_static` | Estado global |
-| `windows-sys` | API de Windows (system tray) |
+| `tray-icon` | Icono de bandeja del sistema (cross-platform) |
+| `muda` | Menú contextual (cross-platform) |
+| `image` | Decodificación de PNG para el icono del tray |
+| `winit` | Event loop para la interfaz gráfica |
 
 ## Troubleshooting
 
 ### No se escucha audio
-- Verifica que las rutas en `main.rs` sean correctas
+- Verifica que las rutas en `src/config.rs` sean correctas
 - Revisa `C:\TrayNarrator\log.txt` para ver errores
 - Asegúrate de que `piper.exe` y el modelo `.onnx` existan
 
@@ -307,5 +323,4 @@ Este proyecto está bajo la [Licencia MIT](LICENSE).
 
 - [Piper TTS](https://github.com/rhasspy/piper) - Motor de síntesis de voz
 - [Piper Voices](https://huggingface.co/rhasspy/piper-voices) - Modelos de voz
-
 

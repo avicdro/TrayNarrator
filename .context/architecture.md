@@ -23,7 +23,10 @@ TrayNarrator is an ultra-lightweight Windows desktop application that converts s
 | `rodio` | 0.19 | WAV audio playback via output stream + Sink |
 | `lazy_static` | 1.5 | Thread-safe global static initialization |
 | `parking_lot` | 0.12 | Efficient Mutex (lighter than std) |
-| `windows-sys` | 0.59 | Native Windows API bindings (Shell, WindowsAndMessaging) |
+| `tray-icon` | 0.19 | Cross-platform system tray icon |
+| `muda` | 0.15 | Cross-platform context menu |
+| `image` | 0.25 | PNG decoding for the tray icon |
+| `winit` | 0.30 | Cross-platform window creation and event loop |
 
 ### Infrastructure
 
@@ -37,7 +40,17 @@ TrayNarrator is an ultra-lightweight Windows desktop application that converts s
 ```
 TrayNarrator/
 ├── src/
-│   └── main.rs              # Entire application (~636 lines, single-file binary)
+│   ├── main.rs          # Entry point: spawns threads, launches tray event loop
+│   ├── audio.rs         # Audio thread: rodio playback, mpsc command receiver
+│   ├── clipboard.rs     # Clipboard access: copy simulation + read via arboard
+│   ├── config.rs        # Compile-time constants (paths, speeds, VERSION)
+│   ├── hotkeys.rs       # Global hotkey registration (F8, F9, Ctrl+[/] por presets xN)
+│   ├── logging.rs       # Timestamped file-based logging
+│   ├── state.rs         # Global state: atomics, enums, speed adjustment
+│   ├── tray.rs          # System tray icon + context menu (tray-icon/muda/winit)
+│   └── tts.rs           # Piper TTS subprocess invocation
+├── assets/
+│   └── traynarrator-icon.png   # System tray icon (embedded via include_bytes!)
 ├── piper/                   # Piper TTS runtime (gitignored, downloaded at release time)
 │   ├── piper.exe
 │   ├── es_ES-sharvard-medium.onnx       # Spanish voice model (~73 MB)
@@ -73,33 +86,17 @@ TrayNarrator/
 
 ## Data Flow
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                          main()                                 │
-│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐  │
-│  │  inputbot    │  │   arboard    │  │       enigo           │  │
-│  │  (Hotkeys)   │  │ (Clipboard)  │  │  (Simulate Ctrl+C)   │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────────┬────────────┘  │
-│         │                 │                      │              │
-│         └─────────────────┼──────────────────────┘              │
-│                           ▼                                     │
-│              ┌────────────────────────┐                         │
-│              │     Main Thread        │                         │
-│              │   (System Tray UI)     │                         │
-│              └────────────┬───────────┘                         │
-│                           │ mpsc::channel<ComandoAudio>         │
-│                           ▼                                     │
-│              ┌────────────────────────┐                         │
-│              │    Audio Thread        │                         │
-│              │   (rodio Sink)         │                         │
-│              └────────────┬───────────┘                         │
-│                           │ stdin pipe                          │
-│                           ▼                                     │
-│              ┌────────────────────────┐                         │
-│              │     Piper TTS          │                         │
-│              │  (External process)    │                         │
-│              └────────────────────────┘                         │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A["main.rs"] -->|"thread::spawn"| B["hotkeys::hilo_inputbot()"]
+    A -->|"thread::spawn"| C["audio::hilo_audio()"]
+    A -->|"blocks main thread"| D["tray::run_tray()"]
+    D -->|"include_bytes!"| E["traynarrator-icon.png"]
+    D -->|"MenuEvent::receiver()"| F["Menu Actions"]
+    F -->|"select speed preset"| G["state::establecer_velocidad()"]
+    F -->|"exit"| H["DEBE_SALIR → event_loop.exit()"]
+    B -->|"Ctrl+[/]"| I["state::velocidad_preset_*()"]
+    I --> G
 ```
 
 1. User selects text in any Windows application and presses **F8**
@@ -109,13 +106,13 @@ TrayNarrator/
 5. Text is piped via stdin to **Piper TTS** (`piper.exe`), which writes a temp WAV file
 6. A `ComandoAudio::Reproducir` message is sent over the **mpsc channel** to the audio thread
 7. The audio thread opens the WAV with `rodio::Decoder` and plays it through a `Sink`
-8. **F9** sends `TogglePausa`; **Ctrl+[/]** adjusts `VELOCIDAD_ACTUAL` (AtomicU32)
+8. **F9** sends `TogglePausa`; **Ctrl+[/]** moves between contiguous `xN` presets and updates `VELOCIDAD_ACTUAL` (AtomicU32)
 
 ## Threading Model
 
 | Thread | Responsibility |
 |--------|---------------|
-| **Main** | Runs the Win32 message loop for the system tray (`tray::run_tray()`) |
+| **Main** | Runs the `winit` event loop for the system tray (`tray::run_tray()`) |
 | **InputBot** | Listens for global hotkey events (`inputbot::handle_input_events()`) |
 | **Audio** | Receives `ComandoAudio` commands, manages `rodio::Sink` playback |
 | **Per-F8** | Short-lived: simulates Ctrl+C → reads clipboard → calls Piper → sends Reproducir |
@@ -131,7 +128,7 @@ TrayNarrator/
 
 ## Configuration
 
-All configuration is done via **compile-time constants** at the top of `main.rs`:
+All configuration is done via **compile-time constants** in `src/config.rs`:
 
 | Constant | Default | Description |
 |----------|---------|-------------|
@@ -139,7 +136,10 @@ All configuration is done via **compile-time constants** at the top of `main.rs`
 | `RUTA_MODELO` | `C:\TrayNarrator\piper\es_ES-sharvard-medium.onnx` | Path to voice model |
 | `RUTA_TEMP_WAV` | `C:\TrayNarrator\temp.wav` | Temporary WAV output path |
 | `RUTA_LOG` | `C:\TrayNarrator\log.txt` | Log file path |
-| `VELOCIDAD_INICIAL` | `80` (= 0.8 length_scale = 1.25× speed) | Initial speech speed |
+| `VELOCIDADES_PRESET` | `x0.5..x3` | Fixed speed presets `(label, length_scale × 100)` |
+| `VELOCIDAD_PRESET_DEFECTO` | `2` | Default preset index (`x1`) |
+| `VELOCIDAD_INICIAL` | `100` (= 1.0 length_scale = 1× speed) | Initial speech speed |
+| `VERSION` | from `Cargo.toml` | Application version (via `env!("CARGO_PKG_VERSION")`) |
 
 ## Project Conventions
 

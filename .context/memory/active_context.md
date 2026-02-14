@@ -5,22 +5,27 @@ description: Current session state - dynamic, updates frequently during developm
 
 # Active Context
 
-> Last updated: 2026-02-10
+> Last updated: 2026-02-14
 
 ## Current Focus
 
-Running the AI Bootstrap process to populate all `.context/` files with accurate project information derived from codebase analysis.
+Finalize and publish release `v0.3.0` with complete changelog and updated project context after manual Windows validation.
 
 ## Recent Changes
 
-- Completed v0.2.0 release with automated CI/CD pipeline
-- Added development scripts for build, deploy, lint, and release
-- Set up `.context/` directory structure via agent-ctx
-- Populated all context files with real project data (this session)
+- Replaced `windows-sys` tray implementation with `tray-icon`/`muda`/`winit` (cross-platform)
+- Added context menu with speed controls, version display, and exit option
+- Embedded the tray icon via `include_bytes!` (no runtime file dependency)
+- Speed control now follows fixed presets: `x0.5`, `x0.75`, `x1`, `x1.25`, `x1.5`, `x2`, `x3`
+- `Ctrl+[` / `Ctrl+]` now step to adjacent faster/slower presets
+- Tray speed submenu now updates when speed is changed via hotkeys
+- Comprehensive documentation review: updated all `.context/` files, `README.md`, `AGENTS.md`, `CONTRIBUTING.md`
+- All docs now reflect the multi-module structure (9 source files instead of single `main.rs`)
+- Manual Windows tests completed (tray, hotkeys, speed flow)
+- Changelog finalized for `v0.3.0`
 
 ## Open Questions
 
-- [ ] Should the project migrate to a multi-module structure (`src/tray.rs`, `src/audio.rs`, etc.)?
 - [ ] Is a config file (TOML) needed now, or can it wait until multi-language support is added?
 - [ ] Should the README be bilingual (English + Spanish) or English-only?
 
@@ -32,8 +37,8 @@ Running the AI Bootstrap process to populate all `.context/` files with accurate
 
 ## Next Steps
 
-1. [ ] Review and finalize populated `.context/` files
-2. [ ] Delete `AI_BOOTSTRAP.md` after review
+1. [ ] Create and push tag `v0.3.0`
+2. [ ] Verify GitHub Release artifacts (ZIP + assets)
 3. [ ] Consider externalizing configuration to a `.toml` file
 4. [ ] Explore multi-language voice model support
 

@@ -6,7 +6,7 @@ use std::sync::mpsc::Sender;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 
-use crate::config::{VELOCIDAD_INICIAL, VELOCIDAD_MAX, VELOCIDAD_MIN, VELOCIDAD_PASO};
+use crate::config::{VELOCIDADES_PRESET, VELOCIDAD_INICIAL};
 use crate::logging::log;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -32,7 +32,7 @@ pub const ESTADO_PAUSADO: u8 = 2;
 /// Estado atómico de reproducción
 pub static ESTADO_AUDIO: AtomicU8 = AtomicU8::new(ESTADO_IDLE);
 
-/// Velocidad actual (length_scale * 100)
+/// Velocidad actual (length_scale × 100)
 pub static VELOCIDAD_ACTUAL: AtomicU32 = AtomicU32::new(VELOCIDAD_INICIAL);
 
 /// Flag para indicar que la aplicación debe terminar
@@ -55,26 +55,59 @@ pub fn enviar_comando(comando: ComandoAudio) {
     }
 }
 
-/// Obtiene la velocidad actual como float
+/// Obtiene la velocidad actual como float (length_scale para Piper)
 pub fn obtener_velocidad() -> f32 {
     VELOCIDAD_ACTUAL.load(Ordering::SeqCst) as f32 / 100.0
 }
 
-/// Ajusta la velocidad (positivo = más lento, negativo = más rápido)
-pub fn ajustar_velocidad(incremento: i32) {
+/// Establece la velocidad a un valor absoluto de length_scale × 100.
+pub fn establecer_velocidad(length_scale_x100: u32) {
     let actual = VELOCIDAD_ACTUAL.load(Ordering::SeqCst);
-    let nueva = if incremento > 0 {
-        (actual + VELOCIDAD_PASO).min(VELOCIDAD_MAX)
-    } else {
-        actual.saturating_sub(VELOCIDAD_PASO).max(VELOCIDAD_MIN)
-    };
-
-    if nueva != actual {
-        VELOCIDAD_ACTUAL.store(nueva, Ordering::SeqCst);
+    if length_scale_x100 != actual {
+        VELOCIDAD_ACTUAL.store(length_scale_x100, Ordering::SeqCst);
+        let etiqueta = etiqueta_velocidad_actual();
         log(&format!(
-            "Velocidad ajustada: {}% (length_scale: {:.2})",
-            nueva,
-            nueva as f32 / 100.0
+            "Velocidad establecida: {} (length_scale: {:.2})",
+            etiqueta,
+            length_scale_x100 as f32 / 100.0
         ));
+    }
+}
+
+/// Devuelve el índice del preset actual en `VELOCIDADES_PRESET`.
+/// Si el valor no coincide exactamente, devuelve el más cercano.
+pub fn indice_preset_actual() -> usize {
+    let actual = VELOCIDAD_ACTUAL.load(Ordering::SeqCst);
+    VELOCIDADES_PRESET
+        .iter()
+        .enumerate()
+        .min_by_key(|(_, (_, ls))| (*ls as i32 - actual as i32).unsigned_abs())
+        .map(|(i, _)| i)
+        .unwrap_or(0)
+}
+
+/// Devuelve la etiqueta del preset de velocidad actual (ej: "x1.25").
+pub fn etiqueta_velocidad_actual() -> &'static str {
+    let idx = indice_preset_actual();
+    VELOCIDADES_PRESET[idx].0
+}
+
+/// Cicla al siguiente preset más rápido (mayor multiplicador → menor length_scale).
+pub fn velocidad_preset_mas_rapido() {
+    let idx = indice_preset_actual();
+    if idx + 1 < VELOCIDADES_PRESET.len() {
+        let (etiqueta, ls) = VELOCIDADES_PRESET[idx + 1];
+        establecer_velocidad(ls);
+        log(&format!("Hotkey: Velocidad → {}", etiqueta));
+    }
+}
+
+/// Cicla al siguiente preset más lento (menor multiplicador → mayor length_scale).
+pub fn velocidad_preset_mas_lento() {
+    let idx = indice_preset_actual();
+    if idx > 0 {
+        let (etiqueta, ls) = VELOCIDADES_PRESET[idx - 1];
+        establecer_velocidad(ls);
+        log(&format!("Hotkey: Velocidad → {}", etiqueta));
     }
 }

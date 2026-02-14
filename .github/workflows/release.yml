@@ -5,7 +5,7 @@
 #
 # Uso:
 #   1. Crear primero una release "assets-v1" con los archivos pesados (piper/)
-#   2. Hacer un tag como: git tag v0.2.0 && git push --tags
+#   2. Hacer un tag como: git tag v0.3.0 && git push --tags
 #   3. El workflow construirá y creará la release automáticamente
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag de la versión (ej: v0.2.0)'
+        description: 'Tag de la versión (ej: v0.3.0)'
         required: true
         type: string
 

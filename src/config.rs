@@ -17,17 +17,30 @@ pub const RUTA_LOG: &str = r"C:\TrayNarrator\log.txt";
 /// Tiempo de espera después de simular Ctrl+C (milisegundos)
 pub const DELAY_COPIAR_MS: u64 = 150;
 
-/// Velocidad inicial (length_scale * 100, ej: 80 = 0.8)
-pub const VELOCIDAD_INICIAL: u32 = 80;
+/// Presets de velocidad: (etiqueta, length_scale × 100).
+///
+/// `length_scale = 1.0 / multiplicador`. Piper usa length_scale para controlar
+/// la duración de los fonemas: menor = más rápido.
+///
+/// Ejemplo: x2 → length_scale 0.50 → almacenado como 50.
+pub const VELOCIDADES_PRESET: &[(&str, u32)] = &[
+    ("x0.5", 200),  // length_scale 2.00 — muy lento
+    ("x0.75", 133), // length_scale 1.33
+    ("x1", 100),    // length_scale 1.00 — normal
+    ("x1.25", 80),  // length_scale 0.80
+    ("x1.5", 67),   // length_scale 0.67
+    ("x2", 50),     // length_scale 0.50
+    ("x3", 33),     // length_scale 0.33 — muy rápido
+];
 
-/// Velocidad mínima (50 = 0.5, muy rápido)
-pub const VELOCIDAD_MIN: u32 = 50;
+/// Índice del preset por defecto (x1 = velocidad normal)
+pub const VELOCIDAD_PRESET_DEFECTO: usize = 2;
 
-/// Velocidad máxima (150 = 1.5, muy lento)
-pub const VELOCIDAD_MAX: u32 = 150;
+/// Velocidad inicial (length_scale × 100). Corresponde al preset por defecto.
+pub const VELOCIDAD_INICIAL: u32 = VELOCIDADES_PRESET[VELOCIDAD_PRESET_DEFECTO].1;
 
-/// Incremento/decremento de velocidad
-pub const VELOCIDAD_PASO: u32 = 10;
+/// Versión de la aplicación (obtenida de Cargo.toml)
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // Para ocultar la ventana de Piper en Windows
 #[cfg(windows)]
