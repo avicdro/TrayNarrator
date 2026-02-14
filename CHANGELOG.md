@@ -5,6 +5,23 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.3.0] - 2026-02-14
+
+### Añadido
+- Arquitectura modular: `main.rs` dividido en 9 módulos (`audio`, `clipboard`, `config`, `hotkeys`, `logging`, `state`, `tray`, `tts`)
+- System tray cross-platform con `tray-icon` + `muda` + `winit` (reemplaza `windows-sys`)
+- Menú contextual del tray: submenú de velocidad, versión, salir
+- Icono del tray embebido en el binario (`include_bytes!`)
+- Presets de velocidad `xN`: `x0.5`, `x0.75`, `x1`, `x1.25`, `x1.5`, `x2`, `x3`
+- Contexto AI para agentes (`.context/`, `AGENTS.md`)
+
+### Cambiado
+- Velocidad por defecto: `x1` (antes `x1.25`)
+- `Ctrl+[` / `Ctrl+]` navegan entre presets contiguos en vez de incrementar/decrementar arbitrariamente
+
+### Corregido
+- El submenú de velocidad del tray se sincroniza cuando la velocidad cambia desde hotkeys
+
 ## [0.2.0] - 2026-02-07
 
 ### Añadido
@@ -47,4 +64,4 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 - Arquitectura multi-hilo para audio no bloqueante
 - Comunicación entre hilos con canales mpsc
 - Estado global thread-safe con AtomicU8/AtomicU32
-- System tray nativo usando windows-sys
+- System tray usando `windows-sys` (Win32 API)

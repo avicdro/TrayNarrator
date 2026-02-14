@@ -4,8 +4,8 @@
 
 - **DRY (Don't Repeat Yourself):** Extract repeated logic into helper functions.
 - **KISS (Keep It Simple):** Prefer the most readable solution over the clever one.
-- **Single-file architecture:** All application code lives in `src/main.rs`, organized into clearly delimited sections using box-drawing comment separators.
-- **No `unsafe` outside the tray module:** The only `unsafe` code is in the `tray` module for Win32 API calls. Keep it contained there.
+- **Multi-module architecture:** Code is organized across multiple files in `src/` (`main.rs`, `audio.rs`, `clipboard.rs`, `config.rs`, `hotkeys.rs`, `logging.rs`, `state.rs`, `tray.rs`, `tts.rs`). Create new modules when logic warrants separation.
+- **No `unsafe` code:** The tray module now uses `tray-icon`/`muda` instead of raw Win32 API. Avoid introducing `unsafe` blocks.
 
 ## 2. Rust & Typing
 
@@ -20,31 +20,31 @@
 - **Functions / Variables:** `snake_case` in **Spanish** (e.g., `manejar_f8`, `leer_portapapeles`, `generar_audio_piper`).
 - **Constants:** `UPPER_SNAKE_CASE` in **Spanish** (e.g., `RUTA_PIPER`, `VELOCIDAD_INICIAL`, `ESTADO_IDLE`).
 - **Enum variants:** `PascalCase` in **Spanish** (e.g., `ComandoAudio::Reproducir`, `ComandoAudio::TogglePausa`).
-- **Module names:** `snake_case` in **English** when generic (e.g., `tray`).
+- **Module names:** `snake_case` in **English** when generic (e.g., `tray`, `audio`, `config`).
 - **Doc comments:** `///` in **Spanish** for all public and significant private functions.
 
 ## 4. Code Organization
 
-The single `main.rs` file is organized into clearly separated sections using box-drawing ASCII separators (`═══`):
+The project uses a multi-module architecture under `src/`:
 
-1. **Module-level doc comment** (`//!`) — top of file
-2. **Imports** — grouped by std, then external crates
-3. **Configuration constants** — all compile-time settings
-4. **Commands & Global state** — enums, atomics, lazy_static
-5. **Logging** — the `log()` function
-6. **System Tray** — `mod tray` (Windows-only, `#[cfg(windows)]`)
-7. **Helper functions** — clipboard, Piper invocation, speed adjustment
-8. **Audio thread** — `hilo_audio()`
-9. **Key handlers** — `manejar_f8()`, `manejar_f9()`, etc.
-10. **InputBot thread** — `hilo_inputbot()`
-11. **Entry point** — `main()`
+| Module | Responsibility |
+|--------|---------------|
+| `main.rs` | Entry point: spawns threads, launches tray event loop |
+| `config.rs` | Compile-time constants (paths, speeds, version) |
+| `state.rs` | Global atomics, enums (`ComandoAudio`), speed adjustment |
+| `logging.rs` | Timestamped file logging (`log()` function) |
+| `audio.rs` | Audio thread, `rodio::Sink` playback |
+| `clipboard.rs` | Ctrl+C simulation + clipboard read |
+| `tts.rs` | Piper TTS subprocess invocation |
+| `hotkeys.rs` | Global hotkey registration and handlers |
+| `tray.rs` | System tray icon + context menu (`tray-icon`/`muda`/`winit`) |
 
 ## 5. Comments & Documentation
 
 - All comments and doc strings are written in **Spanish**.
 - Use `///` doc comments for functions explaining what they do.
 - Use `//` inline comments for non-obvious implementation details.
-- Section headers use box-drawing separators:
+- Section headers within modules use box-drawing separators:
   ```rust
   // ═══════════════════════════════════════════════════════════════
   // SECTION NAME
@@ -67,8 +67,7 @@ The single `main.rs` file is organized into clearly separated sections using box
 
 ## 8. Platform Considerations
 
-- Use `#[cfg(windows)]` for Windows-specific code.
-- Use `#[cfg(not(windows))]` for fallback behavior (simple busy-wait loop).
+- The tray module uses cross-platform crates (`tray-icon`, `muda`, `winit`), but the primary target is Windows.
 - The `#![windows_subsystem = "windows"]` attribute hides the console window.
 - When spawning Piper, use `CREATE_NO_WINDOW` creation flag to hide its console.
 

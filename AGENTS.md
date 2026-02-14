@@ -45,7 +45,7 @@ For session persistence and context continuity, check:
 
 - **Language:** This is a **Rust** project (edition 2021, MSRV 1.70+).
 - **All code, comments, and doc strings are in Spanish.** Follow this convention.
-- **Single-file architecture:** Everything is in `src/main.rs`. Do not create new source files without explicit approval.
+- **Multi-module architecture:** Code is organized in `src/` across multiple files (`main.rs`, `audio.rs`, `clipboard.rs`, `config.rs`, `hotkeys.rs`, `logging.rs`, `state.rs`, `tray.rs`, `tts.rs`). Create new files as needed when logic warrants separation.
 - **Formatting:** Always run `cargo fmt` after making changes.
 - **Linting:** Run `cargo clippy --target x86_64-pc-windows-gnu` to check for issues.
 - **Build (from WSL):** `cargo build --release --target x86_64-pc-windows-gnu`

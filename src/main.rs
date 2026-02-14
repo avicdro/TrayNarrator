@@ -3,8 +3,8 @@
 //! Este programa escucha atajos de teclado globales para leer texto seleccionado.
 //! - F8: Copia el texto seleccionado y lo lee en voz alta
 //! - F9: Pausa/Reanuda la reproducción
-//! - Ctrl+[: Reducir velocidad (más rápido)
-//! - Ctrl+]: Aumentar velocidad (más lento)
+//! - Ctrl+[: Más rápido (siguiente preset xN)
+//! - Ctrl+]: Más lento (preset anterior xN)
 //!
 //! COMPILACIÓN CRUZADA (desde WSL2):
 //! cargo build --release --target x86_64-pc-windows-gnu
@@ -20,7 +20,6 @@ mod config;
 mod hotkeys;
 mod logging;
 mod state;
-#[cfg(windows)]
 mod tray;
 mod tts;
 
@@ -52,24 +51,8 @@ fn main() {
         hotkeys::hilo_inputbot();
     });
 
-    // En Windows, ejecutar el system tray en el hilo principal
-    #[cfg(windows)]
-    {
-        tray::run_tray();
-    }
-
-    // En otros sistemas, simplemente esperar
-    #[cfg(not(windows))]
-    {
-        use std::sync::atomic::Ordering;
-        use std::time::Duration;
-        loop {
-            if state::DEBE_SALIR.load(Ordering::SeqCst) {
-                break;
-            }
-            thread::sleep(Duration::from_millis(100));
-        }
-    }
+    // Ejecutar el system tray en el hilo principal (bloquea hasta salir)
+    tray::run_tray();
 
     log("=== TrayNarrator terminado ===");
 }

@@ -12,7 +12,8 @@ description: Technical stack and dependencies - semi-static, updates with major 
 | Language | Rust | 2021 edition, MSRV 1.70+ |
 | TTS Engine | Piper TTS (external process) | latest |
 | Audio | rodio | 0.19 |
-| Platform API | windows-sys | 0.59 |
+| System Tray | tray-icon + muda | 0.19 / 0.15 |
+| Event Loop | winit | 0.30 |
 | CI/CD | GitHub Actions | N/A |
 
 ## Dependencies
@@ -27,7 +28,10 @@ description: Technical stack and dependencies - semi-static, updates with major 
 | `rodio` 0.19 | Decode and play WAV audio through the default output device |
 | `lazy_static` 1.5 | Initialize the global audio channel sender at runtime |
 | `parking_lot` 0.12 | Efficient Mutex for the channel sender (faster than std) |
-| `windows-sys` 0.59 | Low-level Win32 API bindings for shell notification icons, window management |
+| `tray-icon` 0.19 | Cross-platform system tray icon |
+| `muda` 0.15 | Cross-platform context menu for the tray |
+| `image` 0.25 | PNG decoding for the embedded tray icon |
+| `winit` 0.30 | Cross-platform event loop for the system tray |
 
 ### Development
 
@@ -40,11 +44,17 @@ description: Technical stack and dependencies - semi-static, updates with major 
 
 ## Architecture Decisions
 
-### Single-file binary
+### Multi-module structure
 
-**Context:** The project is small (~636 lines) and unlikely to exceed 1–2 KLOC soon.
-**Decision:** Keep everything in `src/main.rs` with clear section separators.
-**Consequences:** Fast to navigate; will need refactoring into modules if the feature set grows significantly.
+**Context:** The project grew beyond a single file and was refactored into modules for clarity.
+**Decision:** Organize code across 9 files in `src/`: `main.rs`, `audio.rs`, `clipboard.rs`, `config.rs`, `hotkeys.rs`, `logging.rs`, `state.rs`, `tray.rs`, `tts.rs`.
+**Consequences:** Each module has a clear responsibility; easier to navigate and maintain.
+
+### Cross-platform tray with tray-icon + muda
+
+**Context:** The original Win32 API tray implementation (`windows-sys`) was Windows-only and required `unsafe` code.
+**Decision:** Replace with `tray-icon` + `muda` + `winit` for cross-platform tray support. Icon is embedded via `include_bytes!`.
+**Consequences:** Portable foundation, no `unsafe` needed, slightly larger dependency tree but cleaner code.
 
 ### Piper TTS as external subprocess
 
@@ -64,9 +74,21 @@ description: Technical stack and dependencies - semi-static, updates with major 
 **Decision:** Use `AtomicU8`, `AtomicU32`, `AtomicBool` for simple state flags; `parking_lot::Mutex` only where needed (channel sender).
 **Consequences:** Lock-free reads for state checks, minimal contention.
 
+### Speed control via fixed presets (xN)
+
+**Context:** Increment/decrement speed by arbitrary values caused less predictable UX between tray and hotkeys.
+**Decision:** Model speed as fixed contiguous presets (`x0.5`, `x0.75`, `x1`, `x1.25`, `x1.5`, `x2`, `x3`) and move across adjacent presets with `Ctrl+[` / `Ctrl+]`.
+**Consequences:** More predictable behavior, easier UI labeling, and stable mapping to Piper `length_scale`.
+
+### Tray speed UI synchronization
+
+**Context:** Speed could be changed by hotkeys while the tray submenu still displayed a stale selected value.
+**Decision:** Synchronize tray submenu check state/title from global speed state on each event loop cycle.
+**Consequences:** UI remains consistent regardless of whether speed is changed from tray menu or keyboard shortcuts.
+
 ## Integration Points
 
 - **Piper TTS:** Invoked via `std::process::Command`, text piped to stdin, output WAV written to disk.
-- **Windows Shell API:** `Shell_NotifyIconW` for tray icon, `TrackPopupMenu` for context menu.
+- **System Tray:** `tray-icon` + `muda` for the tray icon and context menu; `winit` event loop on the main thread.
 - **System clipboard:** Read-only access via `arboard::Clipboard`.
 - **GitHub Actions:** CI builds on Ubuntu (cross-compile), releases build on `windows-latest`.

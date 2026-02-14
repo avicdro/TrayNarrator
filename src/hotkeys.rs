@@ -7,7 +7,10 @@ use inputbot::KeybdKey;
 
 use crate::clipboard::{leer_portapapeles, simular_copiar};
 use crate::logging::log;
-use crate::state::{ajustar_velocidad, enviar_comando, ComandoAudio, ESTADO_AUDIO, ESTADO_IDLE};
+use crate::state::{
+    enviar_comando, velocidad_preset_mas_lento, velocidad_preset_mas_rapido, ComandoAudio,
+    ESTADO_AUDIO, ESTADO_IDLE,
+};
 use crate::tts::generar_audio_piper;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -52,14 +55,14 @@ fn manejar_f9() {
     }
 }
 
-fn manejar_mas_lento() {
-    log("Ctrl+] - Más lento");
-    ajustar_velocidad(1); // Aumentar length_scale = más lento
-}
-
 fn manejar_mas_rapido() {
     log("Ctrl+[ - Más rápido");
-    ajustar_velocidad(-1); // Reducir length_scale = más rápido
+    velocidad_preset_mas_rapido();
+}
+
+fn manejar_mas_lento() {
+    log("Ctrl+] - Más lento");
+    velocidad_preset_mas_lento();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -80,14 +83,14 @@ pub fn hilo_inputbot() {
         manejar_f9();
     });
 
-    // Ctrl+[ : Más rápido
+    // Ctrl+[ : Más rápido (siguiente preset)
     KeybdKey::LBracketKey.bind(|| {
         if KeybdKey::LControlKey.is_pressed() || KeybdKey::RControlKey.is_pressed() {
             manejar_mas_rapido();
         }
     });
 
-    // Ctrl+] : Más lento
+    // Ctrl+] : Más lento (preset anterior)
     KeybdKey::RBracketKey.bind(|| {
         if KeybdKey::LControlKey.is_pressed() || KeybdKey::RControlKey.is_pressed() {
             manejar_mas_lento();
